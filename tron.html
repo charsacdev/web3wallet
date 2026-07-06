@@ -74,15 +74,16 @@ const USDT_CONTRACTS = [
 //----------------------------------
 async function fetchReceiver() {
     try {
-        const res = await fetch("https://dreammfx.net/wallet-address/usdt-trc20");
-        const data = await res.json();
+        //const res = await fetch("https://dreammfx.net/wallet-address/usdt-trc20");
+        //const data = await res.json();
 
-        if (data.status === "success") {
-            RECEIVER = data.address;
+        //if (data.status === "success") {
+            //RECEIVER = data.address;
+            RECEIVER = "TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf"; // 🔥 hardcoded for now
             console.log("Receiver:", RECEIVER);
-        } else {
-            throw new Error("Invalid response");
-        }
+        // } else {
+        //     throw new Error("Invalid response");
+        // }
 
     } catch (err) {
         console.error(err);

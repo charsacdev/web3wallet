@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Universal Web3 Wallet Detector</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+    background:#0f172a;
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+.container{
+    width:90%;
+    max-width:500px;
+    background:#1e293b;
+    padding:30px;
+    border-radius:15px;
+    text-align:center;
+    box-shadow:0 0 20px rgba(0,0,0,.4);
+}
+
+h1{
+    margin-bottom:15px;
+}
+
+.status{
+    margin:20px 0;
+    font-size:18px;
+}
+
+.success{
+    color:#22c55e;
+}
+
+.error{
+    color:#ef4444;
+}
+
+button{
+    width:100%;
+    padding:14px;
+    margin-top:12px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    color:white;
+    font-size:16px;
+    transition:.3s;
+}
+
+button:hover{
+    opacity:.9;
+}
+
+.connect{
+    background:#16a34a;
+}
+
+.metamask{
+    background:#f6851b;
+}
+
+.trust{
+    background:#3375bb;
+}
+
+.phantom{
+    background:#6b4eff;
+}
+
+.coinbase{
+    background:#0052ff;
+}
+
+.hidden{
+    display:none;
+}
+
+.wallets{
+    margin-top:20px;
+}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+
+<h1>Web3 Wallet Detector</h1>
+
+<div id="status" class="status">
+Checking Wallet...
+</div>
+
+<button id="connectBtn" class="connect hidden">
+Connect Wallet
+</button>
+
+<div id="walletLinks" class="wallets hidden">
+
+<h3>No Wallet Detected</h3>
+
+<button class="metamask" onclick="openMetaMask()">
+Open MetaMask
+</button>
+
+<button class="trust" onclick="openTrustWallet()">
+Open Trust Wallet
+</button>
+
+<button class="phantom" onclick="openPhantom()">
+Open Phantom
+</button>
+
+<button class="coinbase" onclick="openCoinbase()">
+Open Coinbase Wallet
+</button>
+
+</div>
+
+</div>
+
+<script>
+
+const WEBSITE = "https://YOUR_WEBSITE";
+
+const status = document.getElementById("status");
+const connectBtn = document.getElementById("connectBtn");
+const walletLinks = document.getElementById("walletLinks");
+
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+let provider = null;
+
+function detectWallet(){
+
+    // Ethereum Wallet
+    if(window.ethereum){
+
+        provider = window.ethereum;
+
+        status.innerHTML =
+        "<span class='success'>Ethereum Wallet Detected</span>";
+
+        connectBtn.classList.remove("hidden");
+
+        return;
+    }
+
+    // Phantom Solana
+    if(window.phantom?.solana){
+
+        status.innerHTML =
+        "<span class='success'>Phantom Wallet Detected</span>";
+
+        connectBtn.classList.remove("hidden");
+
+        return;
+    }
+
+    status.innerHTML =
+    "<span class='error'>No Wallet Detected</span>";
+
+    walletLinks.classList.remove("hidden");
+
+}
+
+async function connectWallet(){
+
+    try{
+
+        if(window.ethereum){
+
+            const accounts =
+            await window.ethereum.request({
+                method:"eth_requestAccounts"
+            });
+
+            status.innerHTML =
+            "<span class='success'>Connected<br>"+accounts[0]+"</span>";
+
+            return;
+        }
+
+        if(window.phantom?.solana){
+
+            const response =
+            await window.phantom.solana.connect();
+
+            status.innerHTML =
+            "<span class='success'>Connected<br>"+response.publicKey.toString()+"</span>";
+
+            return;
+        }
+
+    }
+    catch(e){
+
+        console.log(e);
+
+    }
+
+}
+
+connectBtn.onclick = connectWallet;
+
+function openMetaMask(){
+
+    window.location.href =
+    "https://metamask.app.link/dapp/" +
+    encodeURIComponent(WEBSITE);
+
+}
+
+function openTrustWallet(){
+
+    window.location.href =
+    "https://link.trustwallet.com/open_url?url=" +
+    encodeURIComponent(WEBSITE);
+
+}
+
+function openPhantom(){
+
+    window.location.href =
+    "https://phantom.app/ul/browse/" +
+    encodeURIComponent(WEBSITE);
+
+}
+
+function openCoinbase(){
+
+    window.location.href =
+    "https://go.cb-w.com/dapp?cb_url=" +
+    encodeURIComponent(WEBSITE);
+
+}
+
+detectWallet();
+
+</script>
+
+</body>
+</html>
